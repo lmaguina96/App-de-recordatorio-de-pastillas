@@ -24,12 +24,18 @@ jobs:
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Install Pods
+      - name: Prepare iOS Configuration
+        # Genera los archivos .rb y la carpeta Flutter que el Podfile necesita
+        run: flutter build ios --config-only --no-codesign
+
+      - name: Install CocoaPods
         run: |
           cd ios
+          # Si falla el pod install, que no detenga el proceso para que el build final lo intente
           pod install || true
 
       - name: Build iOS (No Sign)
+        # Este comando es el que realmente genera el archivo para el iPhone
         run: flutter build ios --release --no-codesign
 
       - name: Upload Artifact

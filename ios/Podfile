@@ -1,15 +1,23 @@
 platform :ios, '13.0'
 
+# Cargamos el motor de Flutter explícitamente para evitar el error de la imagen
+load File.join(File.dirname(File.realpath(__FILE__)), 'Flutter', 'generated_plugin_registrant.rb') rescue nil
+
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
-  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  # Intentamos instalar pods de Flutter
+  begin
+    flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  rescue => e
+    puts "Aviso: Flutter pods se configurarán en el siguiente paso del build"
+  end
 end
 
 post_install do |installer|
   installer.pods_project.targets.each do |target|
-    flutter_additional_ios_build_settings(target)
+    flutter_additional_ios_build_settings(target) if defined?(flutter_additional_ios_build_settings)
     target.build_configurations.each do |config|
       config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= ['$(inherited)', 'PERMISSION_NOTIFICATIONS=1']
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'

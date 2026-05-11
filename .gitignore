@@ -1,32 +1,53 @@
-# Archivos de compilación
+# Archivos de compilación de Flutter
 build/
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
 
 # Android
 android/.gradle/
 android/.idea/
 android/local.properties
+android/generated/
 android/app/debug/
 android/app/profile/
 android/app/release/
-android/caches/
+android/wrapper/dists/  <-- ESTO ARREGLA TU ERROR
+.gradle/
+captures/
 
 # iOS
 ios/.symlinks/
 ios/.generated/
 ios/Flutter/Flutter.framework/
 ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/app.framework
+ios/Pods/
+Podfile.lock
 
-# IDE
+# Archivos de sistema y IDE
 .vscode/
 .idea/
+*.iml
 *.swp
 *.swo
 *~
+.DS_Store
+Thumbs.db
 
 # Otros
 .env
 *.log
-*.zip
+
+# Agrega esto a tu .gitignore si no lo tienes exactamente así
+.gradle/
+build/
+android/.gradle/
+android/build/
+android/caches/
+**/android/caches/
+*.lock

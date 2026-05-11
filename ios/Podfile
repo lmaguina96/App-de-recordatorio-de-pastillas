@@ -1,9 +1,13 @@
+# Esta línea es la que falta y causa el error:
+load File.join(File.dirname(File.realpath(__FILE__)), 'Flutter', 'generated_plugin_registrant.rb')
+
 platform :ios, '13.0'
 
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
+  # Este comando ahora sí funcionará porque cargamos el archivo arriba
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 end
 

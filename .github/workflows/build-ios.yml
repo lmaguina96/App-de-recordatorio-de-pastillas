@@ -19,13 +19,13 @@ jobs:
         run: flutter pub get
 
       - name: Install Pods
-        run: cd ios && pod install || true # Para que no se trabe si no hay pods aún
+        run: cd ios && pod install || true # Instalación de librerías de iOS
 
       - name: Build iOS
         run: flutter build ios --release --no-codesign
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4 # Actualizado a v4 para arreglar el error
+        uses: actions/upload-artifact@v4 # AQUÍ ESTÁ EL ARREGLO (v4)
         with:
           name: ios-build
           path: build/ios/iphoneos/Runner.app

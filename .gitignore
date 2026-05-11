@@ -1,0 +1,32 @@
+# Archivos de compilación
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Android
+android/.gradle/
+android/.idea/
+android/local.properties
+android/app/debug/
+android/app/profile/
+android/app/release/
+android/caches/
+
+# iOS
+ios/.symlinks/
+ios/.generated/
+ios/Flutter/Flutter.framework/
+ios/Flutter/Flutter.podspec
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Otros
+.env
+*.log
+*.zip

@@ -19,14 +19,10 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
-          # No ponemos version fija, dejamos que traiga la ultima estable
-          # Esto forzara a que supere la 3.11.5 que te pide el error
           cache: true
 
       - name: Install Dependencies
-        run: |
-          flutter --version
-          flutter pub get
+        run: flutter pub get
 
       - name: Install Pods
         run: |
@@ -34,10 +30,10 @@ jobs:
           pod install || true
 
       - name: Build iOS (No Sign)
-        run: flutter build ios --release --no-codesign --no-bundle
+        run: flutter build ios --release --no-codesign # Eliminado el --no-bundle que daba error
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios-build
-          path: build/ios/iphoneos
+          path: build/ios/iphoneos/Runner.app

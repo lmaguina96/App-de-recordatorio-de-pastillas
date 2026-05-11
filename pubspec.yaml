@@ -1,43 +1,26 @@
-name: Build iOS
-on:
-  push:
-    branches: [ main ]
-jobs:
-  build:
-    runs-on: macos-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-            
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
+name: recordatorio_pastilla
+description: "App de recordatorio de medicamentos para Luis"
+version: 1.0.0+1
+publish_to: 'none'
 
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
+environment:
+  sdk: '>=3.11.0 <4.0.0' # Esta es la linea que arregla el error de tu imagen
 
-      - name: Install Dependencies
-        run: flutter pub get
+dependencies:
+  flutter:
+    sdk: flutter
 
-      - name: Pre-build Config
-        # Esto genera los archivos .rb que el Podfile necesita antes de fallar
-        run: flutter build ios --config-only --no-codesign
+  awesome_notifications: ^0.8.2
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  cupertino_icons: ^1.0.6
 
-      - name: Install Pods
-        run: |
-          cd ios
-          pod install || true
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.8
 
-      - name: Build iOS (No Sign)
-        run: flutter build ios --release --no-codesign
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-build
-          path: build/ios/iphoneos/Runner.app
+flutter:
+  uses-material-design: true

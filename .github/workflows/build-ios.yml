@@ -18,12 +18,15 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.0'
           channel: 'stable'
+          # No ponemos version fija, dejamos que traiga la ultima estable
+          # Esto forzara a que supere la 3.11.5 que te pide el error
           cache: true
 
       - name: Install Dependencies
-        run: flutter pub get
+        run: |
+          flutter --version
+          flutter pub get
 
       - name: Install Pods
         run: |

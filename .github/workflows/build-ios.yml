@@ -6,8 +6,14 @@ jobs:
   build:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4 # Actualizado a v4
+      - uses: actions/checkout@v4
             
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -15,17 +21,22 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: flutter pub get
 
-      - name: Install Pods
-        run: cd ios && pod install || true # Instalación de librerías de iOS
+      - name: Clean and Pod Update
+        run: |
+          cd ios
+          rm -rf Pods
+          rm -rf Podfile.lock
+          pod repo update
+          pod install
 
-      - name: Build iOS
-        run: flutter build ios --release --no-codesign
+      - name: Build iOS (No Sign)
+        run: flutter build ios --release --no-codesign --no-bundle
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4 # AQUÍ ESTÁ EL ARREGLO (v4)
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
         with:
           name: ios-build
-          path: build/ios/iphoneos/Runner.app
+          path: build/ios/iphoneos

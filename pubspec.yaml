@@ -1,39 +1,43 @@
-name: recordatorio_pastilla
-description: "App de recordatorio de medicamentos para Luis"
-# La version debe ser superior a la anterior si vas a subirla
-version: 1.0.0+1
+name: Build iOS
+on:
+  push:
+    branches: [ main ]
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+            
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
-environment:
-  sdk: '>=3.1.0 <4.0.0'
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
 
-dependencies:
-  flutter:
-    sdk: flutter
+      - name: Install Dependencies
+        run: flutter pub get
 
-  # Notificaciones para las alarmas
-  awesome_notifications: ^0.8.2
-  
-  # Base de datos local
-  hive: ^2.2.3
-  hive_flutter: ^1.1.0
+      - name: Pre-build Config
+        # Esto genera los archivos .rb que el Podfile necesita antes de fallar
+        run: flutter build ios --config-only --no-codesign
 
-  # Iconos adicionales
-  cupertino_icons: ^1.0.6
+      - name: Install Pods
+        run: |
+          cd ios
+          pod install || true
 
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
+      - name: Build iOS (No Sign)
+        run: flutter build ios --release --no-codesign
 
-  # Linter para mantener el código limpio
-  flutter_lints: ^3.0.0
-  
-  # Generador de base de datos
-  hive_generator: ^2.0.1
-  build_runner: ^2.4.8
-
-flutter:
-  uses-material-design: true
-
-  # Si tienes imágenes o fuentes, se declaran aquí abajo
-  # assets:
-  #   - assets/images/
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: build/ios/iphoneos/Runner.app

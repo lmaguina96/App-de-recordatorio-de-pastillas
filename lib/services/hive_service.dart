@@ -31,7 +31,23 @@ class HiveService {
   // Obtener medicamentos
   static List<Medicine> getMedicamentos() {
     if (kIsWeb) {
-      return [];
+      final data = WebStorageService.obtenerMedicamentos();
+
+      return data.map((e) {
+        return Medicine(
+          nombre: e['nombre'] ?? '',
+          horas: List<String>.from(e['horas'] ?? []),
+          vecesAlDia: e['vecesAlDia'] ?? 0,
+          tomadas: List<bool>.from(e['tomadas'] ?? []),
+          pospuestas: List<bool>.from(e['pospuestas'] ?? []),
+          diario: e['diario'] ?? true,
+          dias: List<String>.from(e['dias'] ?? []),
+          notificationIds:
+          List<int>.from(e['notificationIds'] ?? []),
+          postponedUntil:
+          List<String>.from(e['postponedUntil'] ?? []),
+        );
+      }).toList();
     }
 
     return _medicamentosBox?.values.toList() ?? [];

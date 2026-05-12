@@ -15,16 +15,21 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.41.9'  # ← CAMBIO: la versión que sugiere el error
+          flutter-version: '3.41.9'
           channel: 'stable'
           cache: true
 
       - name: Install Dependencies
         run: flutter pub get
 
-      - name: Install CocoaPods dependencies
+      - name: Clean Flutter
+        run: flutter clean
+
+      - name: Install Pod Dependencies (with retry)
         run: |
           cd ios
+          rm -rf Pods
+          rm -rf Podfile.lock
           pod repo update
           pod install --repo-update
           cd ..

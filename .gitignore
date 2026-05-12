@@ -51,3 +51,7 @@ android/build/
 android/caches/
 **/android/caches/
 *.lock
+
+# Web
+web/flutter_service_worker.js
+web/.dart_tool/

@@ -1,164 +1,175 @@
 import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter/foundation.dart';
 import '../models/medicine.dart';
+import 'web_storage_service.dart' if (dart.library.html) 'web_storage_service.dart';
+import 'dart:convert';
 
 class HiveService {
-  static const String _boxName = 'medicamentos';
-  static const String _historialBox = 'historial';
+  static Box<Medicine>? _medicamentosBox;
+  static Box? _historialBox;
 
-  static List<Medicine> getMedicamentos() {
-    final box = Hive.box<Medicine>(_boxName);
-    return box.values.toList();
-  }
-
-  static Future<void> guardarMedicamento(Medicine med, {int? index}) async {
-    final box = Hive.box<Medicine>(_boxName);
-    if (index != null) {
-      await box.putAt(index, med);
+  // Inicializar Hive
+  static Future<void> inicializar() async {
+    if (kIsWeb) {
+      // En web, usamos localStorage
+      print('Usando almacenamiento web (localStorage)');
     } else {
-      await box.add(med);
+      // En mobile, usamos Hive normal
+      await Hive.initFlutter();
+      Hive.registerAdapter(MedicineAdapter());
+
+      _medicamentosBox = await Hive.openBox<Medicine>('medicamentos');
+      _historialBox = await Hive.openBox('historial');
     }
   }
 
-  static Future<void> eliminar(int index) async {
-    final box = Hive.box<Medicine>(_boxName);
-    await box.deleteAt(index);
+  // Obtener medicamentos
+  static List<Medicine> getMedicamentos() {
+    if (kIsWeb) {
+      return [];
+    }
+    return _medicamentosBox?.values.toList() ?? [];
   }
 
-  // ✅ Eliminar medicamento del historial también
-  static Future<void> eliminarDelHistorial(String nombreMedicamento) async {
-    final box = Hive.box(_historialBox);
-    final keysAEliminar = <String>[];
-
-    for (var key in box.keys) {
-      final entrada = box.get(key);
-      if (entrada['nombre'] == nombreMedicamento) {
-        keysAEliminar.add(key as String);
+  // Guardar medicamento
+  static Future<void> guardarMedicamento(Medicine medicine, {int? index}) async {
+    if (kIsWeb) {
+      await WebStorageService.guardarMedicamento(
+        {
+          'nombre': medicine.nombre,
+          'horas': medicine.horas,
+          'vecesAlDia': medicine.vecesAlDia,
+          'tomadas': medicine.tomadas,
+          'pospuestas': medicine.pospuestas,
+          'diario': medicine.diario,
+          'dias': medicine.dias,
+          'notificationIds': medicine.notificationIds,
+          'postponedUntil': medicine.postponedUntil,
+        },
+        index: index,
+      );
+    } else {
+      if (index != null) {
+        await _medicamentosBox?.putAt(index, medicine);
+      } else {
+        await _medicamentosBox?.add(medicine);
       }
     }
+  }
 
-    for (var key in keysAEliminar) {
-      await box.delete(key);
+  // Eliminar medicamento
+  static Future<void> eliminar(int index) async {
+    if (kIsWeb) {
+      await WebStorageService.eliminarMedicamento(index);
+    } else {
+      await _medicamentosBox?.deleteAt(index);
     }
   }
 
+  // Guardar entrada historial
   static Future<void> guardarEntradaHistorial({
     required String fecha,
     required String nombreMedicamento,
     required int dosisTotal,
     required int dosisTomadas,
   }) async {
-    final box = Hive.box(_historialBox);
-    final key = '$fecha|$nombreMedicamento';
-
-    final entradaAnterior = box.get(key);
-
-    int dosisFinal = dosisTomadas;
-    if (entradaAnterior != null) {
-      final dosisAnteriores = entradaAnterior['dosisTomadas'] as int? ?? 0;
-      dosisFinal = dosisTomadas > dosisAnteriores ? dosisTomadas : dosisAnteriores;
+    if (kIsWeb) {
+      await WebStorageService.guardarEntradaHistorial({
+        'fecha': fecha,
+        'nombreMedicamento': nombreMedicamento,
+        'dosisTotal': dosisTotal,
+        'dosisTomadas': dosisTomadas,
+      });
+    } else {
+      final key = '$fecha|$nombreMedicamento';
+      await _historialBox?.put(key, {
+        'fecha': fecha,
+        'nombreMedicamento': nombreMedicamento,
+        'dosisTotal': dosisTotal,
+        'dosisTomadas': dosisTomadas,
+      });
     }
-
-    await box.put(key, {
-      'fecha': fecha,
-      'nombre': nombreMedicamento,
-      'dosisTotal': dosisTotal,
-      'dosisTomadas': dosisFinal,
-    });
   }
 
-  static Map<String, Map<String, dynamic>> getHistorial() {
-    final box = Hive.box(_historialBox);
-    final Map<String, Map<String, dynamic>> result = {};
-    for (var key in box.keys) {
-      result[key as String] = Map<String, dynamic>.from(box.get(key));
+  // Obtener historial
+  static Map<String, dynamic> getHistorial() {
+    if (kIsWeb) {
+      return {};
     }
-    return result;
+    final historial = <String, dynamic>{};
+    final keys = _historialBox?.keys ?? [];
+    for (var key in keys) {
+      historial[key] = _historialBox?.get(key) ?? {};
+    }
+    return historial;
   }
 
+  // Eliminar del historial
+  static Future<void> eliminarDelHistorial(String nombreMedicamento) async {
+    if (kIsWeb) {
+      // En web, limpiar todo por ahora
+      await WebStorageService.limpiarHistorial();
+    } else {
+      final keys = _historialBox?.keys.toList() ?? [];
+      for (var key in keys) {
+        if (key.toString().contains(nombreMedicamento)) {
+          await _historialBox?.delete(key);
+        }
+      }
+    }
+  }
+
+  // Limpiar historial
   static Future<void> limpiarHistorial() async {
-    await Hive.box(_historialBox).clear();
+    if (kIsWeb) {
+      await WebStorageService.limpiarHistorial();
+    } else {
+      await _historialBox?.clear();
+    }
   }
 
-  // ✅ Calcular estadísticas
+  // Calcular estadísticas
   static Map<String, dynamic> calcularEstadisticas() {
-    final box = Hive.box(_historialBox);
-    final Map<String, dynamic> stats = {
-      'cumplimientoSemanal': 0.0,
-      'cumplimientoMensual': 0.0,
-      'medicamentosCumplidos': <String>[],
-      'medicamentosIncumplidos': <String>[],
-      'totalDosis': 0,
-      'dosisTomadas': 0,
-    };
+    if (kIsWeb) {
+      return {
+        'cumplimientoSemanal': 0.0,
+        'cumplimientoMensual': 0.0,
+        'medicamentosCumplidos': 0,
+        'medicamentosIncumplidos': 0,
+        'totalDosis': 0,
+        'dosisTomadas': 0,
+      };
+    }
 
-    if (box.isEmpty) return stats;
-
+    final historial = getHistorial();
     int totalDosis = 0;
     int dosisTomadas = 0;
-    final medicamentos = <String, Map<String, int>>{};
+    final medicamentosCumplidos = <String>{};
+    final medicamentosIncumplidos = <String>{};
 
-    final ahora = DateTime.now();
-    final hace7Dias = ahora.subtract(const Duration(days: 7));
-    final hace30Dias = ahora.subtract(const Duration(days: 30));
+    for (var entry in historial.entries) {
+      final data = entry.value as Map<String, dynamic>;
+      totalDosis += data['dosisTotal'] as int? ?? 0;
+      dosisTomadas += data['dosisTomadas'] as int? ?? 0;
 
-    for (var key in box.keys) {
-      final entrada = box.get(key);
-      final fecha = DateTime.parse(entrada['fecha'] as String);
-      final nombre = entrada['nombre'] as String;
-      final total = entrada['dosisTotal'] as int;
-      final tomadas = entrada['dosisTomadas'] as int;
-
-      if (!medicamentos.containsKey(nombre)) {
-        medicamentos[nombre] = {'total': 0, 'tomadas': 0};
-      }
-      medicamentos[nombre]!['total'] = medicamentos[nombre]!['total']! + total;
-      medicamentos[nombre]!['tomadas'] = medicamentos[nombre]!['tomadas']! + tomadas;
-
-      totalDosis += total;
-      dosisTomadas += tomadas;
-    }
-
-    stats['totalDosis'] = totalDosis;
-    stats['dosisTomadas'] = dosisTomadas;
-
-    // Calcular cumplimiento semanal y mensual
-    int dosisSemana = 0;
-    int dosisSemanaT = 0;
-    int dosisMes = 0;
-    int dosisMesT = 0;
-
-    for (var key in box.keys) {
-      final entrada = box.get(key);
-      final fecha = DateTime.parse(entrada['fecha'] as String);
-      final total = entrada['dosisTotal'] as int;
-      final tomadas = entrada['dosisTomadas'] as int;
-
-      if (fecha.isAfter(hace7Dias)) {
-        dosisSemana += total;
-        dosisSemanaT += tomadas;
-      }
-      if (fecha.isAfter(hace30Dias)) {
-        dosisMes += total;
-        dosisMesT += tomadas;
+      final nombre = data['nombreMedicamento'] as String? ?? 'Desconocido';
+      if (data['dosisTomadas'] == data['dosisTotal']) {
+        medicamentosCumplidos.add(nombre);
+      } else {
+        medicamentosIncumplidos.add(nombre);
       }
     }
 
-    stats['cumplimientoSemanal'] = dosisSemana > 0 ? (dosisSemanaT / dosisSemana * 100).toStringAsFixed(1) : '0';
-    stats['cumplimientoMensual'] = dosisMes > 0 ? (dosisMesT / dosisMes * 100).toStringAsFixed(1) : '0';
+    double cumplimiento = totalDosis > 0 ? (dosisTomadas / totalDosis) * 100 : 0;
 
-    // Medicamentos cumplidos e incumplidos
-    for (var med in medicamentos.entries) {
-      final porcentaje = med.value['total']! > 0
-          ? (med.value['tomadas']! / med.value['total']! * 100)
-          : 0;
-
-      if (porcentaje == 100) {
-        stats['medicamentosCumplidos'].add(med.key);
-      } else if (porcentaje == 0) {
-        stats['medicamentosIncumplidos'].add(med.key);
-      }
-    }
-
-    return stats;
+    return {
+      'cumplimientoSemanal': cumplimiento,
+      'cumplimientoMensual': cumplimiento,
+      'medicamentosCumplidos': medicamentosCumplidos.length,
+      'medicamentosIncumplidos': medicamentosIncumplidos.length,
+      'totalDosis': totalDosis,
+      'dosisTomadas': dosisTomadas,
+    };
   }
 }

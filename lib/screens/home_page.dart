@@ -26,12 +26,12 @@ class _HomePageState extends State<HomePage> {
 
   void _cargarMedicamentos() {
     setState(() {
-      _medicamentos = HiveService.getMedicamentos();
+      _medicamentos = HiveService.getMedicines();
     });
   }
 
   void _agregarMedicamento(Medicine medicine) async {
-    await HiveService.guardarMedicamento(medicine);
+    await HiveService.addMedicine(medicine);
     _cargarMedicamentos();
   }
 
@@ -50,11 +50,10 @@ class _HomePageState extends State<HomePage> {
           ),
           TextButton(
             onPressed: () async {
-              await HiveService.eliminar(index);
+              await HiveService.deleteMedicine(index);
 
-              await HiveService.eliminarDelHistorial(
-                _medicamentos[index].nombre,
-              );
+              // Limpiar historial completo
+              await HiveService.limpiarHistorial();
 
               _cargarMedicamentos();
 
@@ -73,7 +72,7 @@ class _HomePageState extends State<HomePage> {
   void _onDoseAction(
       int medicamentIndex,
       int doseIndex,
-      ) {
+      ) async {
     final medicina = _medicamentos[medicamentIndex];
 
     setState(() {
@@ -81,9 +80,9 @@ class _HomePageState extends State<HomePage> {
       !medicina.tomadas[doseIndex];
     });
 
-    HiveService.guardarMedicamento(
+    await HiveService.updateMedicine(
+      medicamentIndex,
       medicina,
-      index: medicamentIndex,
     );
   }
 
@@ -213,15 +212,15 @@ class _HomePageState extends State<HomePage> {
               // editar después
             },
 
-            onToggle: (doseIndex) {
+            onToggle: (doseIndex) async {
               setState(() {
                 med.tomadas[doseIndex] =
                 !med.tomadas[doseIndex];
               });
 
-              HiveService.guardarMedicamento(
+              await HiveService.updateMedicine(
+                index,
                 med,
-                index: index,
               );
             },
 

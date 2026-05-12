@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import '../models/medicine.dart';
 import '../services/hive_service.dart';
 import '../utils/colors.dart';
@@ -41,32 +40,51 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Eliminar medicamento'),
-        content: const Text('¿Estás seguro de que quieres eliminarlo?'),
+        content: const Text(
+          '¿Estás seguro de que quieres eliminarlo?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancelar'),
           ),
           TextButton(
-            onPressed: () {
-              HiveService.eliminar(index);
-              HiveService.eliminarDelHistorial(_medicamentos[index].nombre);
+            onPressed: () async {
+              await HiveService.eliminar(index);
+
+              await HiveService.eliminarDelHistorial(
+                _medicamentos[index].nombre,
+              );
+
               _cargarMedicamentos();
+
               Navigator.pop(context);
             },
-            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+            child: const Text(
+              'Eliminar',
+              style: TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _onDoseAction(int medicamentIndex, int doseIndex) {
+  void _onDoseAction(
+      int medicamentIndex,
+      int doseIndex,
+      ) {
     final medicina = _medicamentos[medicamentIndex];
+
     setState(() {
-      medicina.tomadas[doseIndex] = !(medicina.tomadas[doseIndex]);
+      medicina.tomadas[doseIndex] =
+      !medicina.tomadas[doseIndex];
     });
-    HiveService.guardarMedicamento(medicina, index: medicamentIndex);
+
+    HiveService.guardarMedicamento(
+      medicina,
+      index: medicamentIndex,
+    );
   }
 
   @override
@@ -77,19 +95,36 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: AppColors.primary,
         centerTitle: true,
       ),
+
       body: _selectedIndex == 0
           ? _buildHomePage()
           : _selectedIndex == 1
-          ? const HistoryPage()
+          ? HistoryPage(
+        historial:
+        HiveService.getHistorial(),
+
+        onClear: () async {
+          await HiveService
+              .limpiarHistorial();
+
+          setState(() {});
+        },
+      )
           : const SettingsPage(),
+
       floatingActionButton: _selectedIndex == 0
           ? FloatingActionButton(
         backgroundColor: AppColors.primary,
         onPressed: () async {
-          final result = await Navigator.push(
+          final result =
+          await Navigator.push(
             context,
-            MaterialPageRoute(builder: (_) => const AddMedicinePage()),
+            MaterialPageRoute(
+              builder: (_) =>
+              const AddMedicinePage(),
+            ),
           );
+
           if (result != null) {
             _agregarMedicamento(result);
           }
@@ -97,17 +132,31 @@ class _HomePageState extends State<HomePage> {
         child: const Icon(Icons.add),
       )
           : null,
+
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
+
         onTap: (index) {
           setState(() {
             _selectedIndex = index;
           });
         },
+
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Historial'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Configuración'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+
+          BottomNavigationBarItem(
+            icon: Icon(Icons.history),
+            label: 'Historial',
+          ),
+
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Configuración',
+          ),
         ],
       ),
     );
@@ -117,16 +166,29 @@ class _HomePageState extends State<HomePage> {
     if (_medicamentos.isEmpty) {
       return Center(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment:
+          MainAxisAlignment.center,
           children: [
-            Icon(Icons.medication, size: 80, color: Colors.grey[300]),
+            Icon(
+              Icons.medication,
+              size: 80,
+              color: Colors.grey[300],
+            ),
+
             const SizedBox(height: 20),
+
             Text(
               'No hay medicamentos',
-              style: Theme.of(context).textTheme.headlineSmall,
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall,
             ),
+
             const SizedBox(height: 10),
-            const Text('Agrega uno con el botón +'),
+
+            const Text(
+              'Agrega uno con el botón +',
+            ),
           ],
         ),
       );
@@ -134,14 +196,40 @@ class _HomePageState extends State<HomePage> {
 
     return ListView.builder(
       itemCount: _medicamentos.length,
+
       itemBuilder: (context, index) {
         final med = _medicamentos[index];
+
         return Padding(
           padding: const EdgeInsets.all(8.0),
+
           child: MedicineCard(
             medicine: med,
-            onDelete: () => _eliminarMedicamento(index),
-            onDoseAction: (doseIndex) => _onDoseAction(index, doseIndex),
+
+            onDelete: () =>
+                _eliminarMedicamento(index),
+
+            onEdit: () {
+              // editar después
+            },
+
+            onToggle: (doseIndex) {
+              setState(() {
+                med.tomadas[doseIndex] =
+                !med.tomadas[doseIndex];
+              });
+
+              HiveService.guardarMedicamento(
+                med,
+                index: index,
+              );
+            },
+
+            onDoseAction: (doseIndex) =>
+                _onDoseAction(
+                  index,
+                  doseIndex,
+                ),
           ),
         );
       },

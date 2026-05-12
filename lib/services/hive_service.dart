@@ -1,9 +1,9 @@
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:flutter/foundation.dart';
+
 import '../models/medicine.dart';
-import 'web_storage_service.dart' if (dart.library.html) 'web_storage_service.dart';
-import 'dart:convert';
+import 'web_storage_service.dart';
 
 class HiveService {
   static Box<Medicine>? _medicamentosBox;
@@ -12,15 +12,19 @@ class HiveService {
   // Inicializar Hive
   static Future<void> inicializar() async {
     if (kIsWeb) {
-      // En web, usamos localStorage
-      print('Usando almacenamiento web (localStorage)');
+      print('Usando almacenamiento web');
     } else {
-      // En mobile, usamos Hive normal
       await Hive.initFlutter();
-      Hive.registerAdapter(MedicineAdapter());
 
-      _medicamentosBox = await Hive.openBox<Medicine>('medicamentos');
-      _historialBox = await Hive.openBox('historial');
+      if (!Hive.isAdapterRegistered(0)) {
+        Hive.registerAdapter(MedicineAdapter());
+      }
+
+      _medicamentosBox =
+      await Hive.openBox<Medicine>('medicamentos');
+
+      _historialBox =
+      await Hive.openBox('historial');
     }
   }
 
@@ -29,11 +33,15 @@ class HiveService {
     if (kIsWeb) {
       return [];
     }
+
     return _medicamentosBox?.values.toList() ?? [];
   }
 
   // Guardar medicamento
-  static Future<void> guardarMedicamento(Medicine medicine, {int? index}) async {
+  static Future<void> guardarMedicamento(
+      Medicine medicine, {
+        int? index,
+      }) async {
     if (kIsWeb) {
       await WebStorageService.guardarMedicamento(
         {
@@ -83,35 +91,49 @@ class HiveService {
       });
     } else {
       final key = '$fecha|$nombreMedicamento';
-      await _historialBox?.put(key, {
-        'fecha': fecha,
-        'nombreMedicamento': nombreMedicamento,
-        'dosisTotal': dosisTotal,
-        'dosisTomadas': dosisTomadas,
-      });
+
+      await _historialBox?.put(
+        key,
+        {
+          'fecha': fecha,
+          'nombreMedicamento': nombreMedicamento,
+          'dosisTotal': dosisTotal,
+          'dosisTomadas': dosisTomadas,
+        },
+      );
     }
   }
 
   // Obtener historial
-  static Map<String, dynamic> getHistorial() {
+  static Map<String, Map<String, dynamic>> getHistorial() {
     if (kIsWeb) {
       return {};
     }
-    final historial = <String, dynamic>{};
+
+    final historial = <String, Map<String, dynamic>>{};
     final keys = _historialBox?.keys ?? [];
+
     for (var key in keys) {
-      historial[key] = _historialBox?.get(key) ?? {};
+      final value = _historialBox?.get(key);
+
+      if (value is Map) {
+        historial[key.toString()] =
+        Map<String, dynamic>.from(value);
+      }
     }
+
     return historial;
   }
 
   // Eliminar del historial
-  static Future<void> eliminarDelHistorial(String nombreMedicamento) async {
+  static Future<void> eliminarDelHistorial(
+      String nombreMedicamento,
+      ) async {
     if (kIsWeb) {
-      // En web, limpiar todo por ahora
       await WebStorageService.limpiarHistorial();
     } else {
       final keys = _historialBox?.keys.toList() ?? [];
+
       for (var key in keys) {
         if (key.toString().contains(nombreMedicamento)) {
           await _historialBox?.delete(key);
@@ -143,31 +165,42 @@ class HiveService {
     }
 
     final historial = getHistorial();
+
     int totalDosis = 0;
     int dosisTomadas = 0;
+
     final medicamentosCumplidos = <String>{};
     final medicamentosIncumplidos = <String>{};
 
     for (var entry in historial.entries) {
-      final data = entry.value as Map<String, dynamic>;
+      final data = entry.value;
+
       totalDosis += data['dosisTotal'] as int? ?? 0;
       dosisTomadas += data['dosisTomadas'] as int? ?? 0;
 
-      final nombre = data['nombreMedicamento'] as String? ?? 'Desconocido';
-      if (data['dosisTomadas'] == data['dosisTotal']) {
+      final nombre =
+          data['nombreMedicamento'] as String? ??
+              'Desconocido';
+
+      if (data['dosisTomadas'] ==
+          data['dosisTotal']) {
         medicamentosCumplidos.add(nombre);
       } else {
         medicamentosIncumplidos.add(nombre);
       }
     }
 
-    double cumplimiento = totalDosis > 0 ? (dosisTomadas / totalDosis) * 100 : 0;
+    double cumplimiento = totalDosis > 0
+        ? (dosisTomadas / totalDosis) * 100
+        : 0;
 
     return {
       'cumplimientoSemanal': cumplimiento,
       'cumplimientoMensual': cumplimiento,
-      'medicamentosCumplidos': medicamentosCumplidos.length,
-      'medicamentosIncumplidos': medicamentosIncumplidos.length,
+      'medicamentosCumplidos':
+      medicamentosCumplidos.length,
+      'medicamentosIncumplidos':
+      medicamentosIncumplidos.length,
       'totalDosis': totalDosis,
       'dosisTomadas': dosisTomadas,
     };
